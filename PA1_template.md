@@ -1,0 +1,93 @@
+--- 
+output: 
+  html_document: 
+    keep_md: true 
+---
+Reproducable Research Course Project 1
+=
+
+Loading and preprocessing the data:
+=
+```{R}
+Activity <- read.csv("./activity.csv")
+```
+
+What is mean total number of steps taken per day?
+=
+First, we're going to make a histogram of the total number of steps taken each day:
+```{R}
+t <- with(Activity, tapply(steps, date, sum))
+hist(t, breaks = 10, xlab = "Number of Steps", main = "Total Number of Steps")
+```
+
+Now we can calculate the mean and median of the total number of steps taken per day:
+```{R}
+Mean <- mean(t, na.rm = T)
+Mean
+Med <- median(t, na.rm = T)
+Med
+```
+
+What is the average daily activity pattern?
+=
+Let's make a time series plot of the 5-minute intervals and the average number of steps taken, averaged across all days:
+```{R}
+SI <- aggregate(steps ~ interval, Activity, mean)
+
+plot(SI$interval, SI$steps, type = "l", xlab = "Interval", ylab = "Average Steps per Day", main = "Average Daily Steps")
+```
+
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+```{R}
+MaxSteps <- SI[which.max(SI$steps), ]
+MaxSteps
+```
+Maximum number of steps (`r round(MaxSteps$steps,0)`) happens in "`r MaxSteps$interval`" interval.
+
+Imputing missing values
+=
+Let's calculate the total number of missing values:
+```{R}
+TotalNas <- sum(is.na(Activity$steps))
+```
+There are `r TotalNas` missing values in the dataset.
+
+Now we're going to replace the missing values with the mean for the 5-minute interval associated with each missing value:
+```{R}
+Activity2 <- Activity
+nas <- is.na(Activity2$steps)
+AvgSteps <- with(Activity2, tapply(steps, interval, mean, na.rm=TRUE))
+Activity2$steps[nas] <- AvgSteps[as.character(Activity2$interval[nas])]
+head(Activity2)
+```
+
+We can make a histogram of the total number of steps taken each day using the new dataset:
+```{R}
+t2 <- with(Activity2, tapply(steps, date, sum))
+hist(t2, breaks = 10, xlab = "Number of Steps", main = "Total Number of Steps After Filling in the Missing Values")
+```
+
+Now we can calculate the mean and median of the total number of steps taken per day for the new dataset:
+```{R}
+Mean2 <- mean(t2, na.rm = T)
+Mean2
+Med2 <- median(t2, na.rm = T)
+Med2
+```
+As we can see, the mean and median of the dataset have not changed after filling in the missing values; however by comparing the histograms, the total number of steps per day are increased since by replacing the missing values by the mean, we've added steps to the total number of steps.
+
+Are there differences in activity patterns between weekdays and weekends?
+=
+
+First, we have to add a column to the dataset to specify if a day is weekday or weekend:
+```{R}
+Activity2$DayType <- as.factor(ifelse(weekdays(as.Date(Activity2$date)) == "Saturday" | weekdays(as.Date(Activity2$date)) == "Sunday", "Weekend", "Weekday"))
+head(Activity2)
+```
+
+Now we can make two time series plots of the 5-minute interval and the average number of steps taken, averaged across all weekday days or weekend days:
+```{R}
+library(lattice)
+SI2 <- aggregate(steps ~ interval + DayType, Activity2, mean)
+xyplot(SI2$steps ~ SI2$interval|SI2$DayType, main = "Average Daily Steps", xlab = "Interval", ylab = "Average Steps per Steps", layout = c(1, 2), type = "l")
+```
